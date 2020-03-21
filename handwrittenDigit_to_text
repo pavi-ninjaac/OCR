@@ -1,0 +1,89 @@
+import tensorflow as tf
+import numpy as np
+import cv2
+import pandas as pd
+from keras.layers import Flatten
+from keras.layers import Dropout
+from keras.layers import Dense
+from keras.models import Sequential
+
+import matplotlib.pyplot as plt
+#print(tf.__version__)
+#importing dataset from tensorflow
+minist=tf.keras.datasets.mnist
+(x_train,y_train), (x_test,y_test)=minist.load_data()
+#normalizing the dataset
+x_train=tf.keras.utils.normalize(x_train,axis=1)
+print(np.shape(x_train))
+
+x_test=tf.keras.utils.normalize(x_test,axis=1)
+# print(np.shape(x_test))
+#building the CNN model
+model=Sequential()
+model.add(Flatten())
+model.add(Dense(128,activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(128,activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(10,activation='softmax'))
+
+model.compile(optimizer="adam",
+              loss="sparse_categorical_crossentropy",
+              metrics=['accuracy'])
+              
+#fitting the model 
+model.fit(x_train,y_train,epochs=4)
+val_loss,val_acc=model.evaluate(x_test,y_test)
+print("value loss{} value accuracy{}".format(val_loss,val_acc))
+#make prediction for one test data
+prediction=model.predict([x_test])
+print(prediction)
+
+#get the input image 
+path=r'C:\Users\ninjaac\PycharmProjects\predict\venv\8.jpg'
+#read the input image as grayscale
+im = cv2.imread(path, 0)
+#to find the counters and remove noice set the threshold value-normally gray scalled images only used for thesholding
+ret,thresh1 = cv2.threshold(im, 120, 255, cv2.THRESH_BINARY)
+#find counters
+contours , hierarchy = cv2.findContours(thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+roi_no=1
+
+for cnt in contours:
+
+    x, y, w, h = cv2.boundingRect(cnt)
+    #draw the rectangle around the image
+    cv2.rectangle(im, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    #cut the regoin of iinterest
+    ROI=im[y:y+h,x:x+w]
+    
+    plt.imshow(ROI)
+    plt.show()
+    #resize the image using numpy function to dataset size
+    gray = cv2.resize(ROI, (28, 28))
+    gray = np.array(tf.keras.utils.normalize(gray, axis=-1,order=0.5))
+    gray.reshape((28,28))
+    batch = np.expand_dims(gray,axis=0)
+    prediction = model.predict(batch)
+    print("prediction: ",prediction)
+    print("pridicted number: ", prediction.argmax())
+    #print("predicted number is",argmax)
+
+    #print(ROI.shape)
+    #print(x.shape)
+
+
+    # pri=model.predict(x)
+    # print(pri)
+    #cv2.imwrite('roi_{}.png'.format(roi_no),ROI)
+    # bound the images
+
+    roi_no+=1
+cv2.imshow('BindingBox',im)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+
+
+
+
