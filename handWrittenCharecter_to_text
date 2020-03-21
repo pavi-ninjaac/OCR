@@ -1,0 +1,105 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pylab as plt
+import tensorflow as tf
+import keras
+from sklearn.model_selection import train_test_split
+from keras.callbacks import ReduceLROnPlateau
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import Dropout
+from keras.layers import Flatten
+from keras.layers import Conv2D,MaxPooling2D
+from keras import backend as ba
+import random
+from keras.preprocessing.image import ImageDataGenerator
+import cv2
+
+train=pd.read_csv(r'E:\emnist dataset\emnist-balanced-test\emnist-balanced-test.csv')
+test=pd.read_csv(r'E:\emnist dataset\emnist-balanced-train\emnist-balanced-train.csv')
+print(train)
+x_train=train.values[:,1:]
+y_train=train.values[:,0]
+x_test=test.values[:,1:]
+y_test=test.values[:,0]
+
+x_train=tf.keras.utils.normalize(x_train,axis=1)
+x_test=tf.keras.utils.normalize(x_test,axis=1)
+print(x_train.shape)
+x_train=x_train.reshape(x_train.shape[0],28,28)
+print(x_train.shape)
+x_train=x_test.reshape(x_test.shape[0],28,28)
+charInd = random.randint(0,10000)
+emnist = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt"
+
+epoches=1
+batch_size=512
+img_rows=28
+img_cols=28
+
+'''
+if ba.image_data_format() == 'channels_first':
+    x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
+    x_test=x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
+    input_shape = (1, img_rows, img_cols)
+else:
+    x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
+    x_test =x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
+    input_shape = (img_rows, img_cols, 1)
+print(np.shape(x_train))
+'''
+data = ImageDataGenerator(
+    width_shift_range = 0.075,
+    height_shift_range = 0.075,
+    rotation_range = 45,
+    shear_range = 0.075)
+
+#contruct the CNN layer for predic the charecter
+model=Sequential()
+#model.add(Conv2D(64, kernel_size=(5, 5),activation='relu',input_shape=input_shape))
+#model.add(Conv2D(64, kernel_size=(5, 5),activation='relu',input_shape=input_shape))
+#model.add(MaxPooling2D(pool_size=(2,2)))
+model.add(Flatten())
+model.add(Dense(1024,activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(1024,activation='relu'))
+model.add(Dropout(0.5))
+
+model.add(Dense(47,activation='softmax'))
+
+#compile  and fit
+model.compile(optimizer="adam",
+              loss="sparse_categorical_crossentropy",
+              metrics=['accuracy'])
+model.fit(x_train,y_train,epochs=3)
+val_loss,val_acc=model.evaluate(x_test,y_test)
+print("value loss{} value accuracy{}".format(val_loss,val_acc))
+
+
+path=r'C:/Users/ninjaac/PycharmProjects/predict/venv/images/model_6.jpg'
+# path = '/home/user/Downloads/a3Rql9C.png'
+im = cv2.imread(path, 0)
+
+#im=cv2.resize(im,(500,500))
+ret,thresh1 = cv2.threshold(im, 120, 255, cv2.THRESH_BINARY)
+
+contours , hierarchy = cv2.findContours(thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+roi_no=1
+for cnt in contours:
+
+    x, y, w, h = cv2.boundingRect(cnt)
+    cv2.rectangle(im, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    ROI=im[y:y+h,x:x+w]
+
+    #plt.imshow(ROI)
+    #plt.show()
+    gray = cv2.resize(ROI, (28, 28))
+    gray = np.array(tf.keras.utils.normalize(gray, axis=-1,order=0.5))
+    gray.reshape((28,28))
+    batch = np.expand_dims(gray,axis=0)
+    prediction = model.predict(batch)
+    print("prediction: ",prediction)
+cv2.imshow('BindingBox', image_noice)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
