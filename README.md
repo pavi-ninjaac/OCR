@@ -10,3 +10,4 @@ first program find the digits only.
 3)cv2-for preprocessing the input image
 4)numpy-array manupulation
 5)python3
+6)
